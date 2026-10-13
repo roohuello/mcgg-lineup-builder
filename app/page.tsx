@@ -30,7 +30,8 @@ export default function Home() {
         <Builder />
         <footer className="mt-8 border-t border-white/10 pt-4 text-xs text-zinc-600">
           Simple planner — not affiliated with Moonton. Synergy numbers simplified for planning; check in-game
-          for exact patch values. Board saves in the link + your browser.
+          for exact patch values. Board saves in the link + your browser. Hero portraits via the community
+          MLBB dataset (Ceplin03/database-mlbb).
         </footer>
       </main>
     </div>

@@ -185,6 +185,7 @@ export type Commander = {
   tier: "S" | "A" | "B";
   skill: string;
   tip: string;
+  img: string;
 };
 
 export const COMMANDERS: Commander[] = [
@@ -194,6 +195,7 @@ export const COMMANDERS: Commander[] = [
     tier: "S",
     skill: "Safety-net sustain + team shields",
     tip: " default climb pick — forgiving while you learn econ.",
+    img: "/heroes/minotaur.png",
   },
   {
     id: "nana",
@@ -201,6 +203,7 @@ export const COMMANDERS: Commander[] = [
     tier: "S",
     skill: "Stargazer / roll support",
     tip: " best with Mage + Stargazer — rush Vexana 2★.",
+    img: "/heroes/nana.png",
   },
   {
     id: "brody",
@@ -208,6 +211,7 @@ export const COMMANDERS: Commander[] = [
     tier: "S",
     skill: "Converts spare heroes into value",
     tip: " new S7 — hold pairs, let Brody fund your roll.",
+    img: "/heroes/brody.png",
   },
   {
     id: "franco",
@@ -215,6 +219,7 @@ export const COMMANDERS: Commander[] = [
     tier: "A",
     skill: "Plunderer's Claw hooks nearest enemy",
     tip: " vs Franco: keep carry CENTER back, not edge.",
+    img: "/heroes/franco.png",
   },
   {
     id: "ling-duel",
@@ -222,6 +227,7 @@ export const COMMANDERS: Commander[] = [
     tier: "A",
     skill: "Dueling Ring pulls farthest hero",
     tip: " vs Ling: leave back corner empty or park a tank there.",
+    img: "/heroes/ling.png",
   },
   {
     id: "angela",
@@ -229,6 +235,7 @@ export const COMMANDERS: Commander[] = [
     tier: "A",
     skill: "Early-mid tempo buffs",
     tip: " camp mid early, pull once backline is set.",
+    img: "/heroes/angela.png",
   },
 ];
 

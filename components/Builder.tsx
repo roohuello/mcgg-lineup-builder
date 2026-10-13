@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import HeroIcon from "@/components/HeroIcon";
 import { COMMANDERS, COST_COLORS, HEROES, heroById, PRESETS, SYNERGIES } from "@/data/game";
 import {
   type Board,
@@ -19,15 +20,7 @@ import {
   type Stars,
 } from "@/lib/lineup";
 
-function heroInitials(name: string) {
-  return name
-    .split(/[^A-Za-z]+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
+export const heroImg = (id: string) => `/heroes/${id}.png`;
 
 function loadState() {
   try {
@@ -225,12 +218,19 @@ export default function Builder() {
                 type="button"
                 key={c.id}
                 onClick={() => setCommander(commander === c.id ? "" : c.id)}
-                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                className={`flex items-center gap-1.5 rounded-full border py-1 pr-3 pl-1 text-xs font-semibold transition ${
                   commander === c.id
                     ? "border-amber-300 bg-amber-300/15 text-amber-200"
                     : "border-white/10 bg-black/30 text-zinc-300 hover:border-indigo-400/50"
                 }`}
               >
+                <HeroIcon
+                  src={c.img}
+                  name={c.name}
+                  size={20}
+                  className="h-5 w-5 rounded-full object-cover"
+                  fallbackClassName="text-[10px]"
+                />
                 [{c.tier}] {c.name}
               </button>
             ))}
@@ -283,7 +283,16 @@ export default function Builder() {
                 )}
                 {hero ? (
                   <>
-                    <span className="text-sm">{heroInitials(hero.name)}</span>
+                    <span className="relative aspect-square h-1/2">
+                      <HeroIcon
+                        src={heroImg(hero.id)}
+                        name={hero.name}
+                        fill
+                        sizes="(max-width: 1024px) 12vw, 64px"
+                        className="rounded-md object-cover"
+                        fallbackClassName="text-sm"
+                      />
+                    </span>
                     <span className="max-w-full truncate px-0.5 text-[9px] font-medium text-zinc-200">
                       {hero.name}
                     </span>
@@ -480,12 +489,23 @@ export default function Builder() {
                   selected == null ? "opacity-40" : "hover:bg-white/10"
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-zinc-100">{h.name}</span>
-                  <span className="text-[10px] font-semibold text-amber-300">{h.cost}g</span>
-                </div>
-                <div className="mt-0.5 truncate text-[10px] text-zinc-400">
-                  {h.synergies.map((s) => s).join(" · ")}
+                <div className="flex items-center gap-2">
+                  <HeroIcon
+                    src={heroImg(h.id)}
+                    name={h.name}
+                    size={32}
+                    className="h-8 w-8 flex-none rounded-md object-cover"
+                    fallbackClassName="text-xs font-bold"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="truncate text-xs font-bold text-zinc-100">{h.name}</span>
+                      <span className="text-[10px] font-semibold text-amber-300">{h.cost}g</span>
+                    </div>
+                    <div className="mt-0.5 truncate text-[10px] text-zinc-400">
+                      {h.synergies.map((s) => s).join(" · ")}
+                    </div>
+                  </div>
                 </div>
                 <div className="text-[10px] text-zinc-500">
                   {h.range === 1 ? "melee — front" : `range ${h.range} — back`} · {h.role}
