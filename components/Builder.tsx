@@ -1,22 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { HEROES, SYNERGIES, COST_COLORS, PRESETS, COMMANDERS, heroById } from "@/data/game";
+import { COMMANDERS, COST_COLORS, HEROES, heroById, PRESETS, SYNERGIES } from "@/data/game";
 import {
-  Board,
-  Stars,
-  COLS,
-  ROWS,
-  STORAGE_KEY,
-  STORAGE_STARS_KEY,
-  STORAGE_COMMANDER_KEY,
+  type Board,
   boardCost,
+  COLS,
   decodeBoard,
   emptyBoard,
   emptyStars,
   encodeBoard,
   getSynergyStatus,
   placedCount,
+  ROWS,
+  STORAGE_COMMANDER_KEY,
+  STORAGE_KEY,
+  STORAGE_STARS_KEY,
+  type Stars,
 } from "@/lib/lineup";
 
 function heroInitials(name: string) {
@@ -59,13 +59,13 @@ const STAR_LABEL = ["", "★", "★★", "★★★"];
 
 export default function Builder() {
   const [board, setBoard] = useState<Board>(() =>
-    typeof window === "undefined" ? emptyBoard() : loadState().board
+    typeof window === "undefined" ? emptyBoard() : loadState().board,
   );
   const [stars, setStars] = useState<Stars>(() =>
-    typeof window === "undefined" ? emptyStars() : loadState().stars
+    typeof window === "undefined" ? emptyStars() : loadState().stars,
   );
   const [commander, setCommander] = useState<string>(() =>
-    typeof window === "undefined" ? "" : loadState().commander
+    typeof window === "undefined" ? "" : loadState().commander,
   );
   const [selected, setSelected] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -198,7 +198,8 @@ export default function Builder() {
     } catch {}
   };
 
-  const selectedHero = selected != null && board[selected] ? heroById(board[selected]!) : undefined;
+  const selectedId = selected != null ? board[selected] : null;
+  const selectedHero = selectedId ? heroById(selectedId) : undefined;
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
@@ -209,7 +210,11 @@ export default function Builder() {
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-zinc-100">Commander</h3>
             {commander && (
-              <button onClick={() => setCommander("")} className="text-xs text-zinc-500 underline hover:text-zinc-300">
+              <button
+                type="button"
+                onClick={() => setCommander("")}
+                className="text-xs text-zinc-500 underline hover:text-zinc-300"
+              >
                 clear
               </button>
             )}
@@ -217,6 +222,7 @@ export default function Builder() {
           <div className="flex flex-wrap gap-1.5">
             {COMMANDERS.map((c) => (
               <button
+                type="button"
                 key={c.id}
                 onClick={() => setCommander(commander === c.id ? "" : c.id)}
                 className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
@@ -231,8 +237,8 @@ export default function Builder() {
           </div>
           {commanderInfo && (
             <p className="mt-2 text-xs text-zinc-400">
-              <span className="font-semibold text-zinc-200">{commanderInfo.name}:</span> {commanderInfo.skill} —
-              {commanderInfo.tip}
+              <span className="font-semibold text-zinc-200">{commanderInfo.name}:</span> {commanderInfo.skill}{" "}
+              —{commanderInfo.tip}
             </p>
           )}
         </div>
@@ -255,6 +261,8 @@ export default function Builder() {
             const star = stars[i] || 0;
             return (
               <button
+                type="button"
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed 32-tile board, indices are stable IDs
                 key={i}
                 onClick={() => onTileClick(i)}
                 title={
@@ -270,11 +278,15 @@ export default function Builder() {
                   star === 3 ? "shadow-[0_0_12px_rgba(251,191,36,0.45)]" : ""
                 }`}
               >
-                {row === 0 && !hero && <span className="absolute top-0.5 text-[8px] text-zinc-600">FRONT</span>}
+                {row === 0 && !hero && (
+                  <span className="absolute top-0.5 text-[8px] text-zinc-600">FRONT</span>
+                )}
                 {hero ? (
                   <>
                     <span className="text-sm">{heroInitials(hero.name)}</span>
-                    <span className="max-w-full truncate px-0.5 text-[9px] font-medium text-zinc-200">{hero.name}</span>
+                    <span className="max-w-full truncate px-0.5 text-[9px] font-medium text-zinc-200">
+                      {hero.name}
+                    </span>
                     <span className={`text-[9px] ${star === 3 ? "text-amber-300" : "text-zinc-400"}`}>
                       {STAR_LABEL[star]} · {hero.cost}g
                     </span>
@@ -288,18 +300,22 @@ export default function Builder() {
         </div>
         <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
           <span className="uppercase tracking-widest">▼ Back — carries here</span>
-          <span className="hidden sm:inline">Tip: keep carry centered vs Franco, don&apos;t hard-corner vs Ling</span>
+          <span className="hidden sm:inline">
+            Tip: keep carry centered vs Franco, don&apos;t hard-corner vs Ling
+          </span>
         </div>
 
         {/* Actions */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
+            type="button"
             onClick={copyLink}
             className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400"
           >
             {copied ? "Link copied ✓" : "Copy share link"}
           </button>
           <button
+            type="button"
             onClick={() => {
               setBoard(emptyBoard());
               setStars(emptyStars());
@@ -319,16 +335,23 @@ export default function Builder() {
               {selectedHero.name}
               {[1, 2, 3].map((n) => (
                 <button
+                  type="button"
                   key={n}
                   onClick={() => setStar(n)}
                   className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                    (stars[selected] || 2) === n ? "bg-amber-300 text-black" : "bg-white/10 text-amber-100 hover:bg-white/20"
+                    (stars[selected] || 2) === n
+                      ? "bg-amber-300 text-black"
+                      : "bg-white/10 text-amber-100 hover:bg-white/20"
                   }`}
                 >
                   {STAR_LABEL[n]}
                 </button>
               ))}
-              <button onClick={removeSelected} className="rounded-full bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20">
+              <button
+                type="button"
+                onClick={removeSelected}
+                className="rounded-full bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20"
+              >
                 ✕
               </button>
               <span className="text-xs text-amber-200/70">tap another tile to move/swap</span>
@@ -342,6 +365,7 @@ export default function Builder() {
           <div className="grid gap-2 sm:grid-cols-3">
             {PRESETS.map((p) => (
               <button
+                type="button"
                 key={p.name}
                 onClick={() => {
                   const next = emptyBoard();
@@ -368,7 +392,10 @@ export default function Builder() {
       <div className="flex flex-col gap-5">
         <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
           <h3 className="mb-1 text-sm font-semibold text-zinc-100">
-            Synergies {activeSynergies.length > 0 && <span className="text-emerald-300">· {activeSynergies.length} active</span>}
+            Synergies{" "}
+            {activeSynergies.length > 0 && (
+              <span className="text-emerald-300">· {activeSynergies.length} active</span>
+            )}
           </h3>
           <p className="mb-3 text-xs text-zinc-500">Counts update as you place heroes.</p>
           <div className="flex flex-col gap-2">
@@ -380,7 +407,9 @@ export default function Builder() {
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`font-semibold ${s.active ? "text-emerald-200" : "text-zinc-300"}`}>{s.name}</span>
+                  <span className={`font-semibold ${s.active ? "text-emerald-200" : "text-zinc-300"}`}>
+                    {s.name}
+                  </span>
                   <span className="text-zinc-400">
                     {s.count}
                     {s.next ? ` → ${s.next}` : " MAX"}
@@ -437,10 +466,13 @@ export default function Builder() {
               <option value="7">7g</option>
             </select>
           </div>
-          {!selected && <p className="mb-2 text-xs text-amber-200/80">Tap a board tile first, then tap a hero.</p>}
+          {!selected && (
+            <p className="mb-2 text-xs text-amber-200/80">Tap a board tile first, then tap a hero.</p>
+          )}
           <div className="grid grid-cols-2 gap-1.5">
             {filtered.map((h) => (
               <button
+                type="button"
                 key={h.id}
                 disabled={selected == null}
                 onClick={() => place(h.id)}
@@ -463,8 +495,8 @@ export default function Builder() {
             {filtered.length === 0 && <p className="col-span-2 text-xs text-zinc-500">No heroes match.</p>}
           </div>
           <p className="mt-2 text-[11px] text-zinc-600">
-            Rows: {ROWS}×{COLS} = your half. New picks land as 2★ — adjust per tile. Data: Season 7 starter set (
-            {HEROES.length} heroes).
+            Rows: {ROWS}×{COLS} = your half. New picks land as 2★ — adjust per tile. Data: Season 7 starter
+            set ({HEROES.length} heroes).
           </p>
         </section>
       </div>

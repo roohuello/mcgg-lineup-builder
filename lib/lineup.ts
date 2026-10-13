@@ -1,4 +1,4 @@
-import { HEROES, SYNERGIES, heroById } from "@/data/game";
+import { HEROES, heroById, SYNERGIES } from "@/data/game";
 
 export const ROWS = 4;
 export const COLS = 8;
