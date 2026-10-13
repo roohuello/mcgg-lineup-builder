@@ -468,6 +468,7 @@ export default function Builder() {
               className="w-24 rounded-lg border border-white/10 bg-black/30 px-2 py-2 text-xs text-zinc-200"
             >
               <option value="all">Cost</option>
+              <option value="1">1g</option>
               <option value="2">2g</option>
               <option value="3">3g</option>
               <option value="4">4g</option>
