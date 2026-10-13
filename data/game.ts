@@ -62,6 +62,23 @@ export const HEROES: Hero[] = [
 export const heroById = (id: string) => HEROES.find((h) => h.id === id);
 export const synergyById = (id: string) => SYNERGIES.find((s) => s.id === id);
 
+export type Commander = {
+  id: string;
+  name: string;
+  tier: "S" | "A" | "B";
+  skill: string;
+  tip: string;
+};
+
+export const COMMANDERS: Commander[] = [
+  { id: "minotaur", name: "Minotaur", tier: "S", skill: "Safety-net sustain + team shields", tip: " default climb pick — forgiving while you learn econ." },
+  { id: "nana", name: "Nana", tier: "S", skill: "Stargazer / roll support", tip: " best with Mage + Stargazer — rush Vexana 2★." },
+  { id: "brody", name: "Brody", tier: "S", skill: "Converts spare heroes into value", tip: " new S7 — hold pairs, let Brody fund your roll." },
+  { id: "franco", name: "Franco", tier: "A", skill: "Plunderer's Claw hooks nearest enemy", tip: " vs Franco: keep carry CENTER back, not edge." },
+  { id: "ling-duel", name: "Ling", tier: "A", skill: "Dueling Ring pulls farthest hero", tip: " vs Ling: leave back corner empty or park a tank there." },
+  { id: "angela", name: "Angela", tier: "A", skill: "Early-mid tempo buffs", tip: " camp mid early, pull once backline is set." },
+];
+
 export const COST_COLORS: Record<number, string> = {
   2: "border-emerald-500",
   3: "border-sky-500",

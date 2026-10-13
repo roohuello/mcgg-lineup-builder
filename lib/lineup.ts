@@ -5,8 +5,10 @@ export const COLS = 8;
 export const TILES = ROWS * COLS;
 
 export type Board = (string | null)[]; // length 32, hero id or null
+export type Stars = number[]; // length 32, 0 = empty, else 1|2|3
 
 export const emptyBoard = (): Board => Array(TILES).fill(null);
+export const emptyStars = (): Stars => Array(TILES).fill(0);
 
 export type SynergyStatus = {
   id: string;
@@ -26,8 +28,6 @@ export function getSynergyStatus(board: Board): SynergyStatus[] {
     if (!hero) continue;
     for (const s of hero.synergies) counts.set(s, (counts.get(s) ?? 0) + 1);
   }
-  // unique heroes only? MCGG counts unique placements; duplicates on board
-  // still count (builder allows 1 copy each, so fine).
   return SYNERGIES.map((s) => {
     const count = counts.get(s.id) ?? 0;
     const hit = s.breakpoints.filter((b) => count >= b);
@@ -61,27 +61,36 @@ export function placedCount(board: Board): number {
   return board.filter(Boolean).length;
 }
 
-// URL share: b=heroId.tile,heroId.tile  (tile = 0..31)
-export function encodeBoard(board: Board): string {
+// URL share: b=heroId.tile.star,heroId.tile.star  (star optional, default 2)
+// Backward compatible with old b=heroId.tile links.
+export function encodeBoard(board: Board, stars?: Stars): string {
   const parts: string[] = [];
   board.forEach((cell, i) => {
-    if (cell) parts.push(`${cell}.${i}`);
+    if (cell) {
+      const star = stars?.[i] || 2;
+      parts.push(`${cell}.${i}.${star}`);
+    }
   });
   return parts.join(",");
 }
 
-export function decodeBoard(param: string | null): Board {
+export function decodeBoard(param: string | null): { board: Board; stars: Stars } {
   const board = emptyBoard();
-  if (!param) return board;
+  const stars = emptyStars();
+  if (!param) return { board, stars };
   const validIds = new Set(HEROES.map((h) => h.id));
   for (const part of param.split(",")) {
-    const [id, tileStr] = part.split(".");
+    const [id, tileStr, starStr] = part.split(".");
     const tile = Number(tileStr);
     if (!id || !validIds.has(id)) continue;
     if (!Number.isInteger(tile) || tile < 0 || tile >= TILES) continue;
+    const star = Number(starStr);
     board[tile] = id;
+    stars[tile] = star === 1 || star === 3 ? star : 2;
   }
-  return board;
+  return { board, stars };
 }
 
 export const STORAGE_KEY = "mcgg-board-v1";
+export const STORAGE_STARS_KEY = "mcgg-stars-v2";
+export const STORAGE_COMMANDER_KEY = "mcgg-commander-v2";

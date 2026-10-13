@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { HEROES, SYNERGIES, COST_COLORS, PRESETS, heroById } from "@/data/game";
+import { HEROES, SYNERGIES, COST_COLORS, PRESETS, COMMANDERS, heroById } from "@/data/game";
 import {
   Board,
+  Stars,
   COLS,
   ROWS,
   STORAGE_KEY,
+  STORAGE_STARS_KEY,
+  STORAGE_COMMANDER_KEY,
   boardCost,
   decodeBoard,
   emptyBoard,
+  emptyStars,
   encodeBoard,
   getSynergyStatus,
   placedCount,
@@ -25,17 +29,44 @@ function heroInitials(name: string) {
     .toUpperCase();
 }
 
-export default function Builder() {
-  const [board, setBoard] = useState<Board>(() => {
-    if (typeof window === "undefined") return emptyBoard();
-    try {
-      const fromUrl = new URLSearchParams(window.location.search).get("b");
-      if (fromUrl) return decodeBoard(fromUrl);
+function loadState() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const { board, stars } = decodeBoard(params.get("b"));
+    const commander = params.get("c") ?? localStorage.getItem(STORAGE_COMMANDER_KEY) ?? "";
+    // fall back to localStorage board if no URL board
+    if (!params.get("b")) {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) return decodeBoard(saved);
-    } catch {}
-    return emptyBoard();
-  });
+      if (saved) {
+        const d = decodeBoard(saved);
+        return { board: d.board, stars: d.stars, commander };
+      }
+      const savedStars = localStorage.getItem(STORAGE_STARS_KEY);
+      if (savedStars) {
+        try {
+          const arr = JSON.parse(savedStars);
+          if (Array.isArray(arr)) return { board, stars: arr, commander };
+        } catch {}
+      }
+    }
+    return { board, stars, commander };
+  } catch {
+    return { board: emptyBoard(), stars: emptyStars(), commander: "" };
+  }
+}
+
+const STAR_LABEL = ["", "★", "★★", "★★★"];
+
+export default function Builder() {
+  const [board, setBoard] = useState<Board>(() =>
+    typeof window === "undefined" ? emptyBoard() : loadState().board
+  );
+  const [stars, setStars] = useState<Stars>(() =>
+    typeof window === "undefined" ? emptyStars() : loadState().stars
+  );
+  const [commander, setCommander] = useState<string>(() =>
+    typeof window === "undefined" ? "" : loadState().commander
+  );
   const [selected, setSelected] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [filterSyn, setFilterSyn] = useState<string>("all");
@@ -45,15 +76,20 @@ export default function Builder() {
   // Persist + sync URL (replace, no reload)
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, encodeBoard(board));
+      localStorage.setItem(STORAGE_KEY, encodeBoard(board, stars));
+      localStorage.setItem(STORAGE_COMMANDER_KEY, commander);
     } catch {}
-    const encoded = encodeBoard(board);
-    const url = encoded ? `?b=${encoded}` : window.location.pathname;
-    window.history.replaceState(null, "", url);
-  }, [board]);
+    const b = encodeBoard(board, stars);
+    const params = new URLSearchParams();
+    if (b) params.set("b", b);
+    if (commander) params.set("c", commander);
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [board, stars, commander]);
 
   const status = useMemo(() => getSynergyStatus(board), [board]);
   const activeSynergies = status.filter((s) => s.active);
+  const commanderInfo = COMMANDERS.find((c) => c.id === commander);
 
   const filtered = HEROES.filter((h) => {
     if (filterCost !== "all" && h.cost !== Number(filterCost)) return false;
@@ -64,35 +100,94 @@ export default function Builder() {
 
   const place = (heroId: string) => {
     if (selected == null) return;
+    const target = selected;
     setBoard((prev) => {
       const next = [...prev];
-      // prevent duplicate hero on board (swap if exists elsewhere)
       const existing = next.indexOf(heroId);
       if (existing !== -1) next[existing] = null;
-      next[selected] = heroId;
+      next[target] = heroId;
       return next;
     });
-    // auto-advance to next empty tile
-    const nextEmpty = board.findIndex((c, i) => !c && i !== selected);
+    setStars((prev) => {
+      const next = [...prev];
+      const existing = board.indexOf(heroId);
+      if (existing !== -1) next[existing] = 0;
+      next[target] = 2; // new placements assumed 2★
+      return next;
+    });
+    const nextEmpty = board.findIndex((c, i) => !c && i !== target);
     setSelected(nextEmpty === -1 ? null : nextEmpty);
   };
 
   const onTileClick = (i: number) => {
-    if (board[i]) {
-      if (selected === i) {
-        // second click removes
-        setBoard((prev) => {
-          const next = [...prev];
-          next[i] = null;
-          return next;
-        });
-        setSelected(null);
-      } else {
-        setSelected(i);
-      }
-    } else {
-      setSelected(selected === i ? null : i);
+    if (selected == null) {
+      setSelected(i);
+      return;
     }
+    if (selected === i) {
+      setSelected(null); // second click deselects (use ✕ to remove)
+      return;
+    }
+    const a = selected;
+    const b = i;
+    const heroA = board[a];
+    const heroB = board[b];
+    if (heroA && !heroB) {
+      // move
+      setBoard((prev) => {
+        const next = [...prev];
+        next[b] = next[a];
+        next[a] = null;
+        return next;
+      });
+      setStars((prev) => {
+        const next = [...prev];
+        next[b] = next[a];
+        next[a] = 0;
+        return next;
+      });
+      setSelected(b);
+    } else if (heroA && heroB) {
+      // swap
+      setBoard((prev) => {
+        const next = [...prev];
+        [next[a], next[b]] = [next[b], next[a]];
+        return next;
+      });
+      setStars((prev) => {
+        const next = [...prev];
+        [next[a], next[b]] = [next[b], next[a]];
+        return next;
+      });
+      setSelected(b);
+    } else {
+      setSelected(b);
+    }
+  };
+
+  const setStar = (n: number) => {
+    if (selected == null || !board[selected]) return;
+    setStars((prev) => {
+      const next = [...prev];
+      next[selected] = n;
+      return next;
+    });
+  };
+
+  const removeSelected = () => {
+    if (selected == null) return;
+    const t = selected;
+    setBoard((prev) => {
+      const next = [...prev];
+      next[t] = null;
+      return next;
+    });
+    setStars((prev) => {
+      const next = [...prev];
+      next[t] = 0;
+      return next;
+    });
+    setSelected(null);
   };
 
   const copyLink = async () => {
@@ -103,14 +198,50 @@ export default function Builder() {
     } catch {}
   };
 
+  const selectedHero = selected != null && board[selected] ? heroById(board[selected]!) : undefined;
+
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
       {/* Board column */}
       <div>
+        {/* Commander picker */}
+        <div className="mb-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-zinc-100">Commander</h3>
+            {commander && (
+              <button onClick={() => setCommander("")} className="text-xs text-zinc-500 underline hover:text-zinc-300">
+                clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {COMMANDERS.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCommander(commander === c.id ? "" : c.id)}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                  commander === c.id
+                    ? "border-amber-300 bg-amber-300/15 text-amber-200"
+                    : "border-white/10 bg-black/30 text-zinc-300 hover:border-indigo-400/50"
+                }`}
+              >
+                [{c.tier}] {c.name}
+              </button>
+            ))}
+          </div>
+          {commanderInfo && (
+            <p className="mt-2 text-xs text-zinc-400">
+              <span className="font-semibold text-zinc-200">{commanderInfo.name}:</span> {commanderInfo.skill} —
+              {commanderInfo.tip}
+            </p>
+          )}
+        </div>
+
         <div className="mb-2 flex items-center justify-between text-xs text-zinc-400">
           <span className="uppercase tracking-widest">▲ Front — faces enemy</span>
           <span>
             {placedCount(board)}/10 on board · {boardCost(board)}g value
+            {commanderInfo ? ` · ${commanderInfo.name}` : ""}
           </span>
         </div>
         <div
@@ -121,23 +252,32 @@ export default function Builder() {
             const hero = cell ? heroById(cell) : undefined;
             const isSel = selected === i;
             const row = Math.floor(i / COLS);
+            const star = stars[i] || 0;
             return (
               <button
                 key={i}
                 onClick={() => onTileClick(i)}
-                title={hero ? `${hero.name} — click again to remove` : `Tile ${i + 1} — click then pick a hero`}
+                title={
+                  hero
+                    ? `${hero.name} ${STAR_LABEL[star]} — click another tile to move/swap`
+                    : `Tile ${i + 1} — click then pick a hero`
+                }
                 className={`relative flex aspect-square flex-col items-center justify-center rounded-lg border text-[11px] font-semibold transition ${
                   hero
                     ? `${COST_COLORS[hero.cost] ?? "border-zinc-600"} border-2 bg-gradient-to-b from-indigo-500/40 to-slate-900`
                     : "border-white/10 bg-white/[0.03] hover:border-indigo-400/60 hover:bg-white/[0.07]"
-                } ${isSel ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-[#0d1226]" : ""}`}
+                } ${isSel ? "ring-2 ring-amber-300 ring-offset-2 ring-offset-[#0d1226]" : ""} ${
+                  star === 3 ? "shadow-[0_0_12px_rgba(251,191,36,0.45)]" : ""
+                }`}
               >
                 {row === 0 && !hero && <span className="absolute top-0.5 text-[8px] text-zinc-600">FRONT</span>}
                 {hero ? (
                   <>
                     <span className="text-sm">{heroInitials(hero.name)}</span>
                     <span className="max-w-full truncate px-0.5 text-[9px] font-medium text-zinc-200">{hero.name}</span>
-                    <span className="text-[9px] text-amber-300">{hero.cost}g</span>
+                    <span className={`text-[9px] ${star === 3 ? "text-amber-300" : "text-zinc-400"}`}>
+                      {STAR_LABEL[star]} · {hero.cost}g
+                    </span>
                   </>
                 ) : (
                   <span className="text-zinc-700">+</span>
@@ -152,7 +292,7 @@ export default function Builder() {
         </div>
 
         {/* Actions */}
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2">
           <button
             onClick={copyLink}
             className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400"
@@ -162,15 +302,36 @@ export default function Builder() {
           <button
             onClick={() => {
               setBoard(emptyBoard());
+              setStars(emptyStars());
               setSelected(null);
             }}
             className="rounded-full border border-white/15 px-4 py-2 text-sm text-zinc-300 hover:bg-white/5"
           >
             Reset board
           </button>
-          {selected != null && (
+          {selected != null && !selectedHero && (
             <span className="rounded-full border border-amber-300/40 bg-amber-300/10 px-4 py-2 text-sm text-amber-200">
               Tile {selected + 1} selected — pick a hero below
+            </span>
+          )}
+          {selected != null && selectedHero && (
+            <span className="flex flex-wrap items-center gap-1.5 rounded-full border border-amber-300/40 bg-amber-300/10 px-3 py-1.5 text-sm text-amber-200">
+              {selectedHero.name}
+              {[1, 2, 3].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setStar(n)}
+                  className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                    (stars[selected] || 2) === n ? "bg-amber-300 text-black" : "bg-white/10 text-amber-100 hover:bg-white/20"
+                  }`}
+                >
+                  {STAR_LABEL[n]}
+                </button>
+              ))}
+              <button onClick={removeSelected} className="rounded-full bg-white/10 px-2 py-0.5 text-xs hover:bg-white/20">
+                ✕
+              </button>
+              <span className="text-xs text-amber-200/70">tap another tile to move/swap</span>
             </span>
           )}
         </div>
@@ -184,8 +345,13 @@ export default function Builder() {
                 key={p.name}
                 onClick={() => {
                   const next = emptyBoard();
-                  for (const [tile, id] of Object.entries(p.tiles)) next[Number(tile)] = id;
+                  const ns = emptyStars();
+                  for (const [tile, id] of Object.entries(p.tiles)) {
+                    next[Number(tile)] = id;
+                    ns[Number(tile)] = 2;
+                  }
                   setBoard(next);
+                  setStars(ns);
                   setSelected(null);
                 }}
                 className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-left hover:border-indigo-400/50"
@@ -297,7 +463,8 @@ export default function Builder() {
             {filtered.length === 0 && <p className="col-span-2 text-xs text-zinc-500">No heroes match.</p>}
           </div>
           <p className="mt-2 text-[11px] text-zinc-600">
-            Rows: {ROWS}×{COLS} = your half. Data: Season 7 Chrono Echoes starter set ({HEROES.length} heroes).
+            Rows: {ROWS}×{COLS} = your half. New picks land as 2★ — adjust per tile. Data: Season 7 starter set (
+            {HEROES.length} heroes).
           </p>
         </section>
       </div>
