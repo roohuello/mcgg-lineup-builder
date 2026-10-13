@@ -30,8 +30,17 @@ export default function Home() {
         <Builder />
         <footer className="mt-8 border-t border-white/10 pt-4 text-xs text-zinc-600">
           Simple planner — not affiliated with Moonton. Synergy numbers simplified for planning; check in-game
-          for exact patch values. Board saves in the link + your browser. Hero portraits via the community
-          MLBB dataset (Ceplin03/database-mlbb).
+          for exact patch values. Board saves in the link + your browser. Hero portraits are Moonton&apos;s
+          in-game art, sourced via{" "}
+          <a
+            href="https://loadoutgg.com/magic-chess-gogo/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline hover:text-zinc-400"
+          >
+            loadoutgg&apos;s MCGG database
+          </a>{" "}
+          — their team builder is worth a look too.
         </footer>
       </main>
     </div>
